@@ -190,16 +190,15 @@ La aplicación utiliza componentes de Radix UI con estilos personalizados con Ta
 
 ### Otros proveedores
 
-La aplicación es compatible con cualquier proveedor que soporte Next.js:
+La aplicación debería ser compatible con cualquier proveedor que soporte Next.js, dentro de ellas se me ocurren:
 
-- Netlify
 - Railway
+- Render
 - DigitalOcean App Platform
 - AWS Amplify
+- Entre muchas otras…
 
-## 📝 Licencia
-
-Este proyecto está bajo la Licencia MIT. Ver el archivo `LICENSE` para más detalles.
+Si la alojas en otro lugar que no sea Vercel cuentame como te fué.
 
 ## 🆘 Soporte
 
