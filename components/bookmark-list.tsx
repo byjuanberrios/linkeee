@@ -229,8 +229,8 @@ export default function BookmarkList({
 
   return (
     <div className="space-y-6">
-      <header className="flex justify-between items-center">
-        <div className="relative w-80">
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="relative w-full sm:w-80">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             type="text"
@@ -240,13 +240,14 @@ export default function BookmarkList({
             className="pl-10"
           />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
           {selectedBookmarks.length > 0 && (
             <Button
               variant="destructive"
               size="sm"
               onClick={handleDeleteMultiple}
               disabled={deletingMultiple}
+              className="flex-1 sm:flex-none"
             >
               {deletingMultiple
                 ? "Eliminando..."
@@ -280,173 +281,320 @@ export default function BookmarkList({
             : "No tienes bookmarks aún. ¡Agrega tu primero!"}
         </div>
       ) : (
-        <div className="border rounded-lg">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8">
-                  <input
-                    type="checkbox"
-                    checked={
-                      selectedBookmarks.length === filteredBookmarks.length &&
-                      filteredBookmarks.length > 0
-                    }
-                    onChange={handleSelectAll}
-                    aria-label="Seleccionar todos"
-                  />
-                </TableHead>
-                <TableHead className="w-[300px]">Título</TableHead>
-                <TableHead className="w-[150px]">Tags</TableHead>
-                <TableHead className="w-[120px]">Fecha</TableHead>
-                <TableHead className="w-[80px]">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredBookmarks.map((bookmark) => (
-                <TableRow key={bookmark.id} className="hover:bg-muted/50">
-                  <TableCell>
+        <>
+          {/* Vista de tabla para desktop */}
+          <div className="hidden md:block border rounded-lg">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8">
+                    <input
+                      type="checkbox"
+                      checked={
+                        selectedBookmarks.length === filteredBookmarks.length &&
+                        filteredBookmarks.length > 0
+                      }
+                      onChange={handleSelectAll}
+                      aria-label="Seleccionar todos"
+                    />
+                  </TableHead>
+                  <TableHead className="w-[300px]">Título</TableHead>
+                  <TableHead className="w-[150px]">Tags</TableHead>
+                  <TableHead className="w-[120px]">Fecha</TableHead>
+                  <TableHead className="w-[80px]">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredBookmarks.map((bookmark) => (
+                  <TableRow key={bookmark.id} className="hover:bg-muted/50">
+                    <TableCell>
+                      <input
+                        type="checkbox"
+                        checked={selectedBookmarks.includes(bookmark.id)}
+                        onChange={() => handleSelectBookmark(bookmark.id)}
+                        aria-label={`Seleccionar bookmark ${bookmark.title}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={bookmark.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium hover:text-stone-600 flex items-center gap-1"
+                        >
+                          <span className="whitespace-nowrap overflow-hidden max-w-sm">
+                            {bookmark.title}
+                          </span>
+                          <ExternalLink className="w-3 h-3" />
+                        </a>
+                        {bookmark.is_shared && (
+                          <Share2 className="w-3 h-3 text-green-600" />
+                        )}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[280px]">
+                        {bookmark.url}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[300px]">
+                        {bookmark.description}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {bookmark.tags.slice(0, 3).map((tag) => (
+                          <Badge
+                            key={tag}
+                            variant="outline"
+                            className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                            onClick={() => handleTagClick(tag)}
+                          >
+                            {tag}
+                          </Badge>
+                        ))}
+                        {bookmark.tags.length > 3 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{bookmark.tags.length - 3}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(bookmark.created_at).toLocaleDateString(
+                          "es-ES"
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                            <span className="sr-only">Abrir menú</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem asChild>
+                            <a
+                              href={bookmark.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-2"
+                            >
+                              <ExternalLink className="h-4 w-4 mr-1" />
+                              Abrir enlace
+                            </a>
+                          </DropdownMenuItem>
+                          <BookmarkForm
+                            bookmark={bookmark}
+                            onBookmarkUpdated={() =>
+                              fetchBookmarks(selectedTag || undefined)
+                            }
+                            trigger={
+                              <DropdownMenuItem
+                                onSelect={(e) => e.preventDefault()}
+                              >
+                                <Edit className="h-4 w-4 mr-1" />
+                                Editar
+                              </DropdownMenuItem>
+                            }
+                          />
+                          <DropdownMenuSeparator />
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <DropdownMenuItem
+                                onSelect={(e) => e.preventDefault()}
+                                className="text-red-600 focus:text-red-600"
+                              >
+                                <Trash2 className="h-4 w-4 mr-1" />
+                                Eliminar
+                              </DropdownMenuItem>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>
+                                  ¿Eliminar bookmark?
+                                </AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  ¿Estás seguro de que quieres eliminar "
+                                  {bookmark.title}"? Esta acción no se puede
+                                  deshacer.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() =>
+                                    handleDeleteBookmark(bookmark.id)
+                                  }
+                                  disabled={deletingBookmarkId === bookmark.id}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  {deletingBookmarkId === bookmark.id
+                                    ? "Eliminando..."
+                                    : "Eliminar"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Vista de tarjetas para móvil */}
+          <div className="md:hidden space-y-4">
+            {filteredBookmarks.map((bookmark) => (
+              <div
+                key={bookmark.id}
+                className="border rounded-lg p-4 space-y-3 hover:bg-muted/50"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
                     <input
                       type="checkbox"
                       checked={selectedBookmarks.includes(bookmark.id)}
                       onChange={() => handleSelectBookmark(bookmark.id)}
                       aria-label={`Seleccionar bookmark ${bookmark.title}`}
+                      className="mt-1"
                     />
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
                       <a
                         href={bookmark.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium hover:text-stone-600 flex items-center gap-1"
+                        className="font-medium hover:text-stone-600 flex items-center gap-1 text-sm"
                       >
-                        <span className="whitespace-nowrap overflow-hidden max-w-sm">
-                          {bookmark.title}
-                        </span>
-                        <ExternalLink className="w-3 h-3" />
+                        <span className="truncate">{bookmark.title}</span>
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
                       </a>
                       {bookmark.is_shared && (
-                        <Share2 className="w-3 h-3 text-green-600" />
+                        <Share2 className="w-3 h-3 text-green-600 mt-1" />
                       )}
                     </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate max-w-[280px]">
-                      {bookmark.url}
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1 truncate max-w-[300px]">
-                      {bookmark.description}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {bookmark.tags.slice(0, 3).map((tag) => (
-                        <Badge
-                          key={tag}
-                          variant="outline"
-                          className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                          onClick={() => handleTagClick(tag)}
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0 flex-shrink-0"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                        <span className="sr-only">Abrir menú</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem asChild>
+                        <a
+                          href={bookmark.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2"
                         >
-                          {tag}
-                        </Badge>
-                      ))}
-                      {bookmark.tags.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{bookmark.tags.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(bookmark.created_at).toLocaleDateString(
-                        "es-ES"
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-8 w-8 p-0"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                          <span className="sr-only">Abrir menú</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem asChild>
-                          <a
-                            href={bookmark.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-2"
+                          <ExternalLink className="h-4 w-4 mr-1" />
+                          Abrir enlace
+                        </a>
+                      </DropdownMenuItem>
+                      <BookmarkForm
+                        bookmark={bookmark}
+                        onBookmarkUpdated={() =>
+                          fetchBookmarks(selectedTag || undefined)
+                        }
+                        trigger={
+                          <DropdownMenuItem
+                            onSelect={(e) => e.preventDefault()}
                           >
-                            <ExternalLink className="h-4 w-4 mr-1" />
-                            Abrir enlace
-                          </a>
-                        </DropdownMenuItem>
-                        <BookmarkForm
-                          bookmark={bookmark}
-                          onBookmarkUpdated={() =>
-                            fetchBookmarks(selectedTag || undefined)
-                          }
-                          trigger={
-                            <DropdownMenuItem
-                              onSelect={(e) => e.preventDefault()}
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </DropdownMenuItem>
+                        }
+                      />
+                      <DropdownMenuSeparator />
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <DropdownMenuItem
+                            onSelect={(e) => e.preventDefault()}
+                            className="text-red-600 focus:text-red-600"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Eliminar
+                          </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>
+                              ¿Eliminar bookmark?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription>
+                              ¿Estás seguro de que quieres eliminar "
+                              {bookmark.title}"? Esta acción no se puede
+                              deshacer.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => handleDeleteBookmark(bookmark.id)}
+                              disabled={deletingBookmarkId === bookmark.id}
+                              className="bg-red-600 hover:bg-red-700"
                             >
-                              <Edit className="h-4 w-4 mr-1" />
-                              Editar
-                            </DropdownMenuItem>
-                          }
-                        />
-                        <DropdownMenuSeparator />
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <DropdownMenuItem
-                              onSelect={(e) => e.preventDefault()}
-                              className="text-red-600 focus:text-red-600"
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" />
-                              Eliminar
-                            </DropdownMenuItem>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>
-                                ¿Eliminar bookmark?
-                              </AlertDialogTitle>
-                              <AlertDialogDescription>
-                                ¿Estás seguro de que quieres eliminar "
-                                {bookmark.title}"? Esta acción no se puede
-                                deshacer.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() =>
-                                  handleDeleteBookmark(bookmark.id)
-                                }
-                                disabled={deletingBookmarkId === bookmark.id}
-                                className="bg-red-600 hover:bg-red-700"
-                              >
-                                {deletingBookmarkId === bookmark.id
-                                  ? "Eliminando..."
-                                  : "Eliminar"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+                              {deletingBookmarkId === bookmark.id
+                                ? "Eliminando..."
+                                : "Eliminar"}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+
+                <div className="text-xs text-muted-foreground truncate">
+                  {bookmark.url}
+                </div>
+
+                {bookmark.description && (
+                  <div className="text-xs text-muted-foreground line-clamp-2">
+                    {bookmark.description}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap gap-1">
+                  {bookmark.tags.slice(0, 3).map((tag) => (
+                    <Badge
+                      key={tag}
+                      variant="outline"
+                      className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                      onClick={() => handleTagClick(tag)}
+                    >
+                      {tag}
+                    </Badge>
+                  ))}
+                  {bookmark.tags.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{bookmark.tags.length - 3}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Calendar className="w-3 h-3" />
+                  {new Date(bookmark.created_at).toLocaleDateString("es-ES")}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

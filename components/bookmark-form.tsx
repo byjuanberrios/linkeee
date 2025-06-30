@@ -15,7 +15,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, X, Edit } from "lucide-react";
+import { Plus, X, Edit, Wand2, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -53,6 +53,7 @@ export default function BookmarkForm({
     is_shared: false,
   });
   const [tagInput, setTagInput] = useState("");
+  const [fetchingMetadata, setFetchingMetadata] = useState(false);
 
   const isEditMode = !!bookmark;
 
@@ -68,6 +69,64 @@ export default function BookmarkForm({
       });
     }
   }, [bookmark]);
+
+  // Función para obtener metadatos de la URL
+  const fetchUrlMetadata = async () => {
+    if (!formData.url.trim()) {
+      toast({
+        title: "Error",
+        description: "Por favor ingresa una URL primero.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setFetchingMetadata(true);
+
+    try {
+      // Necesitamos hacer la petición desde el backend para evitar exponer la API key
+      const response = await fetch("/api/bookmarks/metadata", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: formData.url }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo obtener los metadatos de la URL");
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        setFormData((prev) => ({
+          ...prev,
+          title: data.title || prev.title,
+          description: data.description || prev.description,
+        }));
+
+        toast({
+          title: "Metadatos obtenidos",
+          description:
+            "El título y descripción se han rellenado automáticamente.",
+        });
+      } else {
+        throw new Error(
+          data.error || "No se encontraron metadatos para esta URL"
+        );
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description:
+          "No se pudo obtener los metadatos de la URL. Verifica que la URL sea válida.",
+        variant: "destructive",
+      });
+    } finally {
+      setFetchingMetadata(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -181,16 +240,31 @@ export default function BookmarkForm({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="url">URL</Label>
-            <Input
-              id="url"
-              type="url"
-              placeholder="https://domain.com"
-              value={formData.url}
-              onChange={(e) =>
-                setFormData({ ...formData, url: e.target.value })
-              }
-              required
-            />
+            <div className="flex gap-2">
+              <Input
+                id="url"
+                type="url"
+                placeholder="https://domain.com"
+                value={formData.url}
+                onChange={(e) =>
+                  setFormData({ ...formData, url: e.target.value })
+                }
+                required
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={fetchUrlMetadata}
+                disabled={fetchingMetadata || !formData.url.trim()}
+                title="Obtener título y descripción automáticamente"
+              >
+                {fetchingMetadata ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Wand2 className="w-4 h-4" />
+                )}
+              </Button>
+            </div>
           </div>
 
           <div className="space-y-2">
