@@ -12,6 +12,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -40,6 +42,7 @@ import {
   Trash2,
   MoreVertical,
   Search,
+  Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabase";
@@ -63,6 +66,7 @@ export default function BookmarkList({
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showSharedOnly, setShowSharedOnly] = useState(false);
   const [deletingBookmarkId, setDeletingBookmarkId] = useState<string | null>(
     null
   );
@@ -210,8 +214,14 @@ export default function BookmarkList({
     setSelectedTag(null);
   };
 
-  // Función para filtrar bookmarks por término de búsqueda
+  // Función para filtrar bookmarks por término de búsqueda y filtro de compartidos
   const filteredBookmarks = bookmarks.filter((bookmark) => {
+    // Filtro por compartidos
+    if (showSharedOnly && !bookmark.is_shared) {
+      return false;
+    }
+
+    // Filtro por término de búsqueda
     if (!searchTerm.trim()) return true;
 
     const searchLower = searchTerm.toLowerCase();
@@ -230,15 +240,31 @@ export default function BookmarkList({
   return (
     <div className="space-y-6">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-          <Input
-            type="text"
-            placeholder="Buscar bookmarks..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+            <Input
+              type="text"
+              placeholder="Buscar bookmarks..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex items-center space-x-2 whitespace-nowrap">
+            <Switch
+              id="shared-filter"
+              checked={showSharedOnly}
+              onCheckedChange={setShowSharedOnly}
+            />
+            <Label
+              htmlFor="shared-filter"
+              className="text-sm flex items-center gap-1"
+            >
+              <Share2 className="w-4 h-4" />
+              Solo compartidos
+            </Label>
+          </div>
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {selectedBookmarks.length > 0 && (
@@ -258,16 +284,31 @@ export default function BookmarkList({
         </div>
       </header>
 
-      {selectedTag && (
+      {(selectedTag || showSharedOnly) && (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
               Filtrando por:
             </span>
-            <Badge variant="default" className="flex items-center gap-2">
-              {selectedTag}
-              <X className="w-3 h-3 cursor-pointer" onClick={clearTagFilter} />
-            </Badge>
+            {selectedTag && (
+              <Badge variant="default" className="flex items-center gap-2">
+                {selectedTag}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={clearTagFilter}
+                />
+              </Badge>
+            )}
+            {showSharedOnly && (
+              <Badge variant="secondary" className="flex items-center gap-2">
+                <Share2 className="w-3 h-3" />
+                Compartidos
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={() => setShowSharedOnly(false)}
+                />
+              </Badge>
+            )}
           </div>
         </div>
       )}
@@ -278,6 +319,8 @@ export default function BookmarkList({
             ? `No se encontraron bookmarks que coincidan con "${searchTerm}"`
             : selectedTag
             ? `No hay bookmarks con el tag "${selectedTag}"`
+            : showSharedOnly
+            ? "No tienes bookmarks compartidos aún."
             : "No tienes bookmarks aún. ¡Agrega tu primero!"}
         </div>
       ) : (
