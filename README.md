@@ -1,6 +1,6 @@
 # 📚 Linkeee - Aplicación de Bookmarks
 
-Una aplicación moderna y elegante para gestionar tus enlaces favoritos, construida con Next.js, Supabase y autenticación con GitHub.
+Una aplicación moderna y elegante para gestionar tus enlaces favoritos, construida con Next.js, MongoDB y autenticación con GitHub (NextAuth).
 
 Nace de la necesidad de un bookmark manager personal que sea simple y alojable en Vercel.
 
@@ -19,7 +19,7 @@ Nace de la necesidad de un bookmark manager personal que sea simple y alojable e
 
 - **Frontend**: Next.js 15, React 19, TypeScript
 - **UI**: Tailwind CSS, shadcn UI, Lucide.dev
-- **Backend**: Supabase (PostgreSQL, Auth, API)
+- **Backend**: MongoDB (Atlas o local) y NextAuth
 - **Autenticación**: GitHub OAuth
 - **Formularios**: React Hook Form + Zod
 - **Notificaciones**: Sonner
@@ -28,7 +28,7 @@ Nace de la necesidad de un bookmark manager personal que sea simple y alojable e
 
 - Node.js 18+
 - Cuenta de GitHub (para autenticación)
-- Cuenta de Supabase (para la base de datos)
+- Cuenta de MongoDB Atlas (o instancia local) para la base de datos
 
 ## 🛠️ Instalación
 
@@ -55,11 +55,10 @@ Nace de la necesidad de un bookmark manager personal que sea simple y alojable e
    cp env.example .env.local
    ```
 
-4. **Configura Supabase**
+4. **Configura MongoDB**
 
-   - Crea un nuevo proyecto en [Supabase](https://supabase.com)
-   - Ejecuta el script SQL en `scripts/create-bookmarks-table.sql`
-   - Copia las credenciales de tu proyecto
+   - Crea un cluster en [MongoDB Atlas](https://www.mongodb.com/atlas) o usa una instancia local
+   - Copia tu `MONGODB_URI` y define `MONGODB_DB`
 
 5. **Configura GitHub OAuth**
 
@@ -71,10 +70,9 @@ Nace de la necesidad de un bookmark manager personal que sea simple y alojable e
    Edita `.env.local` con tus credenciales:
 
    ```env
-   # Supabase
-   NEXT_PUBLIC_SUPABASE_URL=tu-url-de-supabase
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-   SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
+   # MongoDB
+   MONGODB_URI=mongodb+srv://user:password@cluster/dbname?retryWrites=true&w=majority
+   MONGODB_DB=linkeee
 
    # GitHub OAuth
    GITHUB_ID=tu-github-client-id
@@ -204,7 +202,7 @@ Si la alojas en otro lugar que no sea Vercel cuentame como te fué.
 
 Si tienes problemas o preguntas:
 
-1. Revisa la documentación de [Supabase](https://supabase.com/docs)
+1. Revisa la documentación de [MongoDB Atlas](https://www.mongodb.com/docs/atlas/)
 2. Consulta la documentación de [Next.js](https://nextjs.org/docs)
 3. Abre un issue en el repositorio
 

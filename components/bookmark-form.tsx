@@ -15,10 +15,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Plus, X, Edit, Wand2, Loader2 } from "lucide-react";
+import { Plus, X, Wand2, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
 import type { Bookmark } from "@/types/bookmark";
 
 interface BookmarkFormProps {
@@ -135,11 +134,6 @@ export default function BookmarkForm({
     setLoading(true);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
-
       const url = isEditMode
         ? `/api/bookmarks/user/${bookmark!.id}`
         : "/api/bookmarks/user";
@@ -150,7 +144,6 @@ export default function BookmarkForm({
         method,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify(formData),
       });

@@ -37,15 +37,12 @@ import {
   ExternalLink,
   Share2,
   Calendar,
-  Tag,
   Edit,
   Trash2,
   MoreVertical,
   Search,
-  Filter,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
-import { supabase } from "@/lib/supabase";
 import type { Bookmark } from "@/types/bookmark";
 import BookmarkForm from "./bookmark-form";
 import { toast } from "@/hooks/use-toast";
@@ -77,20 +74,11 @@ export default function BookmarkList({
     if (!user) return;
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) return;
-
       const url = tag
         ? `/api/bookmarks/user?tag=${encodeURIComponent(tag)}`
         : "/api/bookmarks/user";
 
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      });
+      const response = await fetch(url);
       const data = await response.json();
 
       if (response.ok) {
@@ -109,16 +97,8 @@ export default function BookmarkList({
     setDeletingBookmarkId(bookmarkId);
 
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
-
       const response = await fetch(`/api/bookmarks/user/${bookmarkId}`, {
         method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
       });
 
       if (!response.ok) {
@@ -165,17 +145,10 @@ export default function BookmarkList({
     if (!user || selectedBookmarks.length === 0) return;
     setDeletingMultiple(true);
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      if (!session) throw new Error("No session");
       const results = await Promise.all(
         selectedBookmarks.map((bookmarkId) =>
           fetch(`/api/bookmarks/user/${bookmarkId}`, {
             method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-            },
           })
         )
       );
@@ -204,6 +177,7 @@ export default function BookmarkList({
 
   useEffect(() => {
     fetchBookmarks(selectedTag || undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshTrigger, selectedTag, user]);
 
   const handleTagClick = (tag: string) => {
@@ -464,8 +438,8 @@ export default function BookmarkList({
                                   ¿Eliminar bookmark?
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  ¿Estás seguro de que quieres eliminar "
-                                  {bookmark.title}"? Esta acción no se puede
+                                  ¿Estás seguro de que quieres eliminar &quot;
+                                  {bookmark.title}&quot;? Esta acción no se puede
                                   deshacer.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
@@ -579,8 +553,8 @@ export default function BookmarkList({
                               ¿Eliminar bookmark?
                             </AlertDialogTitle>
                             <AlertDialogDescription>
-                              ¿Estás seguro de que quieres eliminar "
-                              {bookmark.title}"? Esta acción no se puede
+                              ¿Estás seguro de que quieres eliminar &quot;
+                              {bookmark.title}&quot;? Esta acción no se puede
                               deshacer.
                             </AlertDialogDescription>
                           </AlertDialogHeader>

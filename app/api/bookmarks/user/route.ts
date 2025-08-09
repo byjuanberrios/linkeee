@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase";
+import { getDb } from "@/lib/mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import type { ObjectId } from "mongodb";
 
 // Obtener el email autorizado desde las variables de entorno
 const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL;
@@ -15,23 +18,13 @@ function isUserAuthorized(userEmail: string | undefined): boolean {
 
 export async function GET(request: Request) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = createServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Verificar que el usuario esté autorizado
-    if (!isUserAuthorized(user.email)) {
+    if (!isUserAuthorized(session.user.email)) {
       return NextResponse.json(
         { error: "Access denied - Unauthorized user" },
         { status: 403 }
@@ -41,23 +34,41 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const tag = searchParams.get("tag");
 
-    let query = supabase
-      .from("bookmarks")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false });
-
-    if (tag) {
-      query = query.contains("tags", [tag]);
+    const db = await getDb();
+    interface BookmarkDoc {
+      _id?: ObjectId;
+      user_id: string;
+      url: string;
+      title: string;
+      description?: string;
+      tags?: string[];
+      is_shared?: boolean;
+      created_at?: string;
+      updated_at?: string;
     }
+    const collection = db.collection<BookmarkDoc>("bookmarks");
 
-    const { data: bookmarks, error } = await query;
+    const filter: Record<string, unknown> = { user_id: session.user.email };
+    if (tag) filter.tags = tag;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    const docs = await collection
+      .find(filter)
+      .sort({ created_at: -1 })
+      .toArray();
 
-    return NextResponse.json({ bookmarks: bookmarks || [] });
+    const bookmarks = docs.map((doc) => ({
+      id: (doc._id as ObjectId).toString(),
+      user_id: doc.user_id,
+      url: doc.url,
+      title: doc.title,
+      description: doc.description,
+      tags: doc.tags ?? [],
+      is_shared: !!doc.is_shared,
+      created_at: doc.created_at,
+      updated_at: doc.updated_at,
+    }));
+
+    return NextResponse.json({ bookmarks });
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json(
@@ -69,23 +80,13 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = createServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Verificar que el usuario esté autorizado
-    if (!isUserAuthorized(user.email)) {
+    if (!isUserAuthorized(session.user.email)) {
       return NextResponse.json(
         { error: "Access denied - Unauthorized user" },
         { status: 403 }
@@ -101,26 +102,38 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const { data: bookmark, error } = await supabase
-      .from("bookmarks")
-      .insert({
-        user_id: user.id,
-        user_email: user.email,
-        user_name: user.user_metadata?.full_name || "Unknown",
-        url,
-        title,
-        description: description || "",
-        tags: tags || [],
-        is_shared: is_shared || false,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Supabase insert error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    const now = new Date().toISOString();
+    const db = await getDb();
+    interface InsertDoc {
+      _id?: ObjectId;
+      user_id: string;
+      user_email: string;
+      user_name: string;
+      url: string;
+      title: string;
+      description?: string;
+      tags?: string[];
+      is_shared?: boolean;
+      created_at: string;
+      updated_at: string;
     }
+    const collection = db.collection<InsertDoc>("bookmarks");
+
+    const doc = {
+      user_id: session.user.email,
+      user_email: session.user.email,
+      user_name: session.user.name || "Unknown",
+      url,
+      title,
+      description: description || "",
+      tags: Array.isArray(tags) ? tags : [],
+      is_shared: !!is_shared,
+      created_at: now,
+      updated_at: now,
+    };
+
+    const result = await collection.insertOne(doc);
+    const bookmark = { ...doc, id: result.insertedId.toString() };
 
     return NextResponse.json({ bookmark });
   } catch (error) {

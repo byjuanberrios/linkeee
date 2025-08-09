@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerClient } from "@/lib/supabase";
+import { getDb } from "@/lib/mongodb";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { ObjectId } from "mongodb";
 
 // Obtener el email autorizado desde las variables de entorno
 const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL;
@@ -18,23 +21,13 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = createServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Verificar que el usuario esté autorizado
-    if (!isUserAuthorized(user.email)) {
+    if (!isUserAuthorized(session.user.email)) {
       return NextResponse.json(
         { error: "Access denied - Unauthorized user" },
         { status: 403 }
@@ -51,42 +44,40 @@ export async function PUT(
       );
     }
 
-    // Verificar que el bookmark pertenece al usuario
-    const { data: existingBookmark, error: fetchError } = await supabase
-      .from("bookmarks")
-      .select("id, user_id")
-      .eq("id", params.id)
-      .single();
+    const db = await getDb();
+    const collection = db.collection("bookmarks");
 
-    if (fetchError || !existingBookmark) {
-      return NextResponse.json(
-        { error: "Bookmark not found" },
-        { status: 404 }
-      );
+    const _id = new ObjectId(params.id);
+    const existing = await collection.findOne({ _id });
+    if (!existing) {
+      return NextResponse.json({ error: "Bookmark not found" }, { status: 404 });
     }
-
-    if (existingBookmark.user_id !== user.id) {
+    if (existing.user_id !== session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    const { data: bookmark, error } = await supabase
-      .from("bookmarks")
-      .update({
-        url,
-        title,
-        description: description || "",
-        tags: tags || [],
-        is_shared: is_shared || false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", params.id)
-      .select()
-      .single();
+    const updateDoc = {
+      url,
+      title,
+      description: description || "",
+      tags: Array.isArray(tags) ? tags : [],
+      is_shared: !!is_shared,
+      updated_at: new Date().toISOString(),
+    };
 
-    if (error) {
-      console.error("Supabase update error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    await collection.updateOne({ _id }, { $set: updateDoc });
+    const updated = await collection.findOne({ _id });
+    const bookmark = {
+      id: updated!._id.toString(),
+      user_id: updated!.user_id,
+      url: updated!.url,
+      title: updated!.title,
+      description: updated!.description,
+      tags: updated!.tags ?? [],
+      is_shared: !!updated!.is_shared,
+      created_at: updated!.created_at,
+      updated_at: updated!.updated_at,
+    };
 
     return NextResponse.json({ bookmark });
   } catch (error) {
@@ -103,57 +94,30 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const supabase = createServerClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
-
-    if (authError || !user) {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Verificar que el usuario esté autorizado
-    if (!isUserAuthorized(user.email)) {
+    if (!isUserAuthorized(session.user.email)) {
       return NextResponse.json(
         { error: "Access denied - Unauthorized user" },
         { status: 403 }
       );
     }
 
-    // Verificar que el bookmark pertenece al usuario
-    const { data: existingBookmark, error: fetchError } = await supabase
-      .from("bookmarks")
-      .select("id, user_id")
-      .eq("id", params.id)
-      .single();
-
-    if (fetchError || !existingBookmark) {
-      return NextResponse.json(
-        { error: "Bookmark not found" },
-        { status: 404 }
-      );
+    const db = await getDb();
+    const collection = db.collection("bookmarks");
+    const _id = new ObjectId(params.id);
+    const existing = await collection.findOne({ _id });
+    if (!existing) {
+      return NextResponse.json({ error: "Bookmark not found" }, { status: 404 });
     }
-
-    if (existingBookmark.user_id !== user.id) {
+    if (existing.user_id !== session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
-
-    const { error } = await supabase
-      .from("bookmarks")
-      .delete()
-      .eq("id", params.id);
-
-    if (error) {
-      console.error("Supabase delete error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
+    await collection.deleteOne({ _id });
     return NextResponse.json({ message: "Bookmark deleted successfully" });
   } catch (error) {
     console.error("API error:", error);

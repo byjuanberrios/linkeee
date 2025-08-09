@@ -1,23 +1,48 @@
 import { NextResponse } from "next/server"
-import { createServerClient } from "@/lib/supabase"
+import { getDb } from "@/lib/mongodb"
+import type { ObjectId } from "mongodb"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const tag = searchParams.get("tag")
 
-  const supabase = createServerClient()
+  const db = await getDb()
 
-  let query = supabase.from("bookmarks").select("*").eq("is_shared", true).order("created_at", { ascending: false })
+  interface BookmarkDoc {
+    _id?: ObjectId
+    user_id: string
+    url: string
+    title: string
+    description?: string
+    tags?: string[]
+    is_shared?: boolean
+    created_at?: string
+    updated_at?: string
+  }
 
+  const collection = db.collection<BookmarkDoc>("bookmarks")
+
+  const filter: Record<string, unknown> = { is_shared: true }
   if (tag) {
-    query = query.contains("tags", [tag])
+    filter.tags = tag
   }
 
-  const { data: bookmarks, error } = await query
+  const docs = await collection
+    .find(filter)
+    .sort({ created_at: -1 })
+    .toArray()
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
+  const bookmarks = docs.map((doc) => ({
+    id: (doc._id as ObjectId).toString(),
+    user_id: doc.user_id,
+    url: doc.url,
+    title: doc.title,
+    description: doc.description,
+    tags: doc.tags ?? [],
+    is_shared: !!doc.is_shared,
+    created_at: doc.created_at,
+    updated_at: doc.updated_at,
+  }))
 
   return NextResponse.json({ bookmarks })
 }
