@@ -20,9 +20,8 @@ const clientPromise: Promise<MongoClient> = (async () => {
 
 export async function getDb(): Promise<Db> {
   if (!dbName) dbName = process.env.MONGODB_DB as string | undefined;
-  if (!dbName) throw new Error("MONGODB_DB is not defined in environment variables");
+  if (!dbName)
+    throw new Error("MONGODB_DB is not defined in environment variables");
   const connectedClient = await clientPromise;
   return connectedClient.db(dbName);
 }
-
-
