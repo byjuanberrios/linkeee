@@ -42,6 +42,7 @@ export async function GET(request: Request) {
       title: string;
       description?: string;
       tags?: string[];
+      category: string;
       is_shared?: boolean;
       created_at?: string;
       updated_at?: string;
@@ -63,6 +64,7 @@ export async function GET(request: Request) {
       title: doc.title,
       description: doc.description,
       tags: doc.tags ?? [],
+      category: doc.category || "uncategorized",
       is_shared: !!doc.is_shared,
       created_at: doc.created_at,
       updated_at: doc.updated_at,
@@ -94,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { url, title, description, tags, is_shared } = body;
+    const { url, title, description, tags, category, is_shared } = body;
 
     if (!url || !title) {
       return NextResponse.json(
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
       title: string;
       description?: string;
       tags?: string[];
+      category: string;
       is_shared?: boolean;
       created_at: string;
       updated_at: string;
@@ -127,6 +130,7 @@ export async function POST(request: Request) {
       title,
       description: description || "",
       tags: Array.isArray(tags) ? tags : [],
+      category: category || "uncategorized",
       is_shared: !!is_shared,
       created_at: now,
       updated_at: now,

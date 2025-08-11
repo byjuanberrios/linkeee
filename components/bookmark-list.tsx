@@ -62,6 +62,7 @@ export default function BookmarkList({
   const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showSharedOnly, setShowSharedOnly] = useState(false);
   const [deletingBookmarkId, setDeletingBookmarkId] = useState<string | null>(
@@ -188,10 +189,23 @@ export default function BookmarkList({
     setSelectedTag(null);
   };
 
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(category === selectedCategory ? null : category);
+  };
+
+  const clearCategoryFilter = () => {
+    setSelectedCategory(null);
+  };
+
   // Función para filtrar bookmarks por término de búsqueda y filtro de compartidos
   const filteredBookmarks = bookmarks.filter((bookmark) => {
     // Filtro por compartidos
     if (showSharedOnly && !bookmark.is_shared) {
+      return false;
+    }
+
+    // Filtro por categoría
+    if (selectedCategory && bookmark.category !== selectedCategory) {
       return false;
     }
 
@@ -258,7 +272,7 @@ export default function BookmarkList({
         </div>
       </header>
 
-      {(selectedTag || showSharedOnly) && (
+      {(selectedTag || selectedCategory || showSharedOnly) && (
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground">
@@ -270,6 +284,18 @@ export default function BookmarkList({
                 <X
                   className="w-3 h-3 cursor-pointer"
                   onClick={clearTagFilter}
+                />
+              </Badge>
+            )}
+            {selectedCategory && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-2 capitalize"
+              >
+                {selectedCategory}
+                <X
+                  className="w-3 h-3 cursor-pointer"
+                  onClick={clearCategoryFilter}
                 />
               </Badge>
             )}
@@ -317,6 +343,7 @@ export default function BookmarkList({
                   </TableHead>
                   <TableHead className="w-[300px]">Título</TableHead>
                   <TableHead className="w-[150px]">Tags</TableHead>
+                  <TableHead className="w-[100px]">Categoría</TableHead>
                   <TableHead className="w-[120px]">Fecha</TableHead>
                   <TableHead className="w-[80px]">Acciones</TableHead>
                 </TableRow>
@@ -374,6 +401,15 @@ export default function BookmarkList({
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="secondary"
+                        className="capitalize cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                        onClick={() => handleCategoryClick(bookmark.category)}
+                      >
+                        {bookmark.category}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -439,8 +475,8 @@ export default function BookmarkList({
                                 </AlertDialogTitle>
                                 <AlertDialogDescription>
                                   ¿Estás seguro de que quieres eliminar &quot;
-                                  {bookmark.title}&quot;? Esta acción no se puede
-                                  deshacer.
+                                  {bookmark.title}&quot;? Esta acción no se
+                                  puede deshacer.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>

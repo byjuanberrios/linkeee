@@ -8,9 +8,11 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   title TEXT NOT NULL,
   description TEXT DEFAULT '',
   tags TEXT[] DEFAULT '{}',
+  category TEXT NOT NULL DEFAULT 'uncategorized',
   is_shared BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  CONSTRAINT valid_category CHECK (category IN ('uncategorized', 'development', 'typography', 'design_tool')),
 );
 
 -- Create indexes for better performance

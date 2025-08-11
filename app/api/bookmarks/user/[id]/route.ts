@@ -35,7 +35,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { url, title, description, tags, is_shared } = body;
+    const { url, title, description, tags, category, is_shared } = body;
 
     if (!url || !title) {
       return NextResponse.json(
@@ -50,7 +50,10 @@ export async function PUT(
     const _id = new ObjectId(params.id);
     const existing = await collection.findOne({ _id });
     if (!existing) {
-      return NextResponse.json({ error: "Bookmark not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Bookmark not found" },
+        { status: 404 }
+      );
     }
     if (existing.user_id !== session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
@@ -61,6 +64,7 @@ export async function PUT(
       title,
       description: description || "",
       tags: Array.isArray(tags) ? tags : [],
+      category: category || "uncategorized",
       is_shared: !!is_shared,
       updated_at: new Date().toISOString(),
     };
@@ -74,6 +78,7 @@ export async function PUT(
       title: updated!.title,
       description: updated!.description,
       tags: updated!.tags ?? [],
+      category: updated!.category || "uncategorized",
       is_shared: !!updated!.is_shared,
       created_at: updated!.created_at,
       updated_at: updated!.updated_at,
@@ -112,7 +117,10 @@ export async function DELETE(
     const _id = new ObjectId(params.id);
     const existing = await collection.findOne({ _id });
     if (!existing) {
-      return NextResponse.json({ error: "Bookmark not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Bookmark not found" },
+        { status: 404 }
+      );
     }
     if (existing.user_id !== session.user.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });

@@ -18,7 +18,7 @@ import {
 import { Plus, X, Wand2, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
-import type { Bookmark } from "@/types/bookmark";
+import type { Bookmark, BookmarkCategory } from "@/types/bookmark";
 
 interface BookmarkFormProps {
   onBookmarkAdded?: () => void;
@@ -49,6 +49,7 @@ export default function BookmarkForm({
     title: "",
     description: "",
     tags: [] as string[],
+    category: "uncategorized" as BookmarkCategory,
     is_shared: false,
   });
   const [tagInput, setTagInput] = useState("");
@@ -64,6 +65,7 @@ export default function BookmarkForm({
         title: bookmark.title,
         description: bookmark.description || "",
         tags: bookmark.tags || [],
+        category: bookmark.category,
         is_shared: bookmark.is_shared || false,
       });
     }
@@ -170,6 +172,7 @@ export default function BookmarkForm({
           title: "",
           description: "",
           tags: [],
+          category: "uncategorized",
           is_shared: false,
         });
       }
@@ -283,6 +286,27 @@ export default function BookmarkForm({
                 setFormData({ ...formData, description: e.target.value })
               }
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category">Categoría</Label>
+            <select
+              id="category"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              value={formData.category}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  category: e.target.value as BookmarkCategory,
+                })
+              }
+              required
+            >
+              <option value="uncategorized">No categorizado</option>
+              <option value="development">Desarrollo</option>
+              <option value="typography">Tipografía</option>
+              <option value="design_tool">Herramienta de diseño</option>
+            </select>
           </div>
 
           <div className="space-y-2">
