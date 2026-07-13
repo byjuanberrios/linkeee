@@ -16,6 +16,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signInWithGitHub: () => Promise<void>;
+  signInWithCredentials: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
   isAuthorized: boolean;
 }
@@ -50,6 +51,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading: status === "loading",
     signInWithGitHub: async () => {
       await signIn("github", { callbackUrl: "/" });
+    },
+    signInWithCredentials: async (email: string, password: string) => {
+      const res = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+        callbackUrl: "/",
+      });
+      if (res?.error) {
+        return { ok: false, error: res.error };
+      }
+      return { ok: true };
     },
     signOut: async () => {
       await signOut({ callbackUrl: "/" });

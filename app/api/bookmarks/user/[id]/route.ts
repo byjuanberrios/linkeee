@@ -64,7 +64,7 @@ export async function PUT(
       title,
       description: description || "",
       tags: Array.isArray(tags) ? tags : [],
-      category: category || "uncategorized",
+      category: category || "Sin categorizar",
       is_shared: !!is_shared,
       updated_at: new Date().toISOString(),
     };
@@ -78,7 +78,7 @@ export async function PUT(
       title: updated!.title,
       description: updated!.description,
       tags: updated!.tags ?? [],
-      category: updated!.category || "uncategorized",
+      category: updated!.category || "Sin categorizar",
       is_shared: !!updated!.is_shared,
       created_at: updated!.created_at,
       updated_at: updated!.updated_at,

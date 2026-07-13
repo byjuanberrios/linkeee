@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { CategorySelector } from "@/components/ui/category-selector";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +50,7 @@ export default function BookmarkForm({
     title: "",
     description: "",
     tags: [] as string[],
-    category: "uncategorized" as BookmarkCategory,
+    category: "Sin categorizar",
     is_shared: false,
   });
   const [tagInput, setTagInput] = useState("");
@@ -65,7 +66,7 @@ export default function BookmarkForm({
         title: bookmark.title,
         description: bookmark.description || "",
         tags: bookmark.tags || [],
-        category: bookmark.category,
+        category: bookmark.category || "Sin categorizar",
         is_shared: bookmark.is_shared || false,
       });
     }
@@ -172,7 +173,7 @@ export default function BookmarkForm({
           title: "",
           description: "",
           tags: [],
-          category: "uncategorized",
+          category: "Sin categorizar",
           is_shared: false,
         });
       }
@@ -290,23 +291,12 @@ export default function BookmarkForm({
 
           <div className="space-y-2">
             <Label htmlFor="category">Categoría</Label>
-            <select
-              id="category"
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            <CategorySelector
               value={formData.category}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  category: e.target.value as BookmarkCategory,
-                })
+              onChange={(value) =>
+                setFormData({ ...formData, category: value })
               }
-              required
-            >
-              <option value="uncategorized">No categorizado</option>
-              <option value="development">Desarrollo</option>
-              <option value="typography">Tipografía</option>
-              <option value="design_tool">Herramienta de diseño</option>
-            </select>
+            />
           </div>
 
           <div className="space-y-2">

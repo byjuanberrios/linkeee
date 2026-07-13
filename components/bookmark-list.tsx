@@ -46,6 +46,7 @@ import { useAuth } from "@/lib/auth-context";
 import type { Bookmark } from "@/types/bookmark";
 import BookmarkForm from "./bookmark-form";
 import { toast } from "@/hooks/use-toast";
+import BookmarkControls from "./bookmark-controls";
 
 interface BookmarkListProps {
   onBookmarkAdded?: () => void;
@@ -227,50 +228,16 @@ export default function BookmarkList({
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-            <Input
-              type="text"
-              placeholder="Buscar bookmarks..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center space-x-2 whitespace-nowrap">
-            <Switch
-              id="shared-filter"
-              checked={showSharedOnly}
-              onCheckedChange={setShowSharedOnly}
-            />
-            <Label
-              htmlFor="shared-filter"
-              className="text-sm flex items-center gap-1"
-            >
-              <Share2 className="w-4 h-4" />
-              Solo compartidos
-            </Label>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {selectedBookmarks.length > 0 && (
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={handleDeleteMultiple}
-              disabled={deletingMultiple}
-              className="flex-1 sm:flex-none"
-            >
-              {deletingMultiple
-                ? "Eliminando..."
-                : `Eliminar (${selectedBookmarks.length})`}
-            </Button>
-          )}
-          <BookmarkForm onBookmarkAdded={onBookmarkAdded} />
-        </div>
-      </header>
+      <BookmarkControls
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        showSharedOnly={showSharedOnly}
+        setShowSharedOnly={setShowSharedOnly}
+        onBookmarkAdded={onBookmarkAdded}
+        selectedBookmarksCount={selectedBookmarks.length}
+        onDeleteMultiple={handleDeleteMultiple}
+        deletingMultiple={deletingMultiple}
+      />
 
       {(selectedTag || selectedCategory || showSharedOnly) && (
         <div className="flex items-center gap-2">

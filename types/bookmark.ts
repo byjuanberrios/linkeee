@@ -1,8 +1,4 @@
-export type BookmarkCategory =
-  | "uncategorized"
-  | "development"
-  | "typography"
-  | "design_tool";
+export type BookmarkCategory = string;
 
 export interface Bookmark {
   id: string;

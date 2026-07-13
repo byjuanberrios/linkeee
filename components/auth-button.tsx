@@ -8,11 +8,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Github, LogOut, AlertCircle } from "lucide-react";
+import { Github, LogOut, AlertCircle, LogIn } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useRouter } from "next/navigation";
+
+const HAS_GITHUB = !!process.env.NEXT_PUBLIC_GITHUB_ID;
 
 export default function AuthButton() {
   const { user, loading, signInWithGitHub, signOut, isAuthorized } = useAuth();
+  const router = useRouter();
 
   if (loading) {
     return <Button disabled>Cargando...</Button>;
@@ -20,14 +24,21 @@ export default function AuthButton() {
 
   if (!user) {
     return (
-      <Button onClick={signInWithGitHub}>
-        <Github className="w-4 h-4 mr-2" />
-        Iniciar sesión con GitHub
-      </Button>
+      <div className="flex items-center gap-2">
+        <Button onClick={() => router.push("/login")}>
+          <LogIn className="w-4 h-4 mr-2" />
+          Iniciar sesión
+        </Button>
+        {HAS_GITHUB && (
+          <Button variant="outline" onClick={signInWithGitHub}>
+            <Github className="w-4 h-4 mr-2" />
+            GitHub
+          </Button>
+        )}
+      </div>
     );
   }
 
-  // Si el usuario está logueado pero no está autorizado, mostrar mensaje
   if (!isAuthorized) {
     return (
       <div className="flex items-center gap-2 text-sm text-red-600">

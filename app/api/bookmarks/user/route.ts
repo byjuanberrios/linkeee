@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       title,
       description: description || "",
       tags: Array.isArray(tags) ? tags : [],
-      category: category || "uncategorized",
+      category: category || "Sin categorizar",
       is_shared: !!is_shared,
       created_at: now,
       updated_at: now,

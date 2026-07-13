@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   is_shared BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  CONSTRAINT valid_category CHECK (category IN ('uncategorized', 'development', 'typography', 'design_tool')),
+  CONSTRAINT valid_category CHECK (category IN ('uncategorized')),
 );
 
 -- Create indexes for better performance
