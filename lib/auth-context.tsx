@@ -6,6 +6,7 @@ import { signIn, signOut, useSession } from "next-auth/react";
 
 type AuthUser = {
   email?: string | null;
+  provider?: string | null;
   user_metadata?: {
     full_name?: string | null;
     avatar_url?: string | null;
@@ -37,6 +38,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!session?.user) return null;
     return {
       email: session.user.email,
+      provider: (session.user as { provider?: string | null }).provider ?? null,
       user_metadata: {
         full_name: session.user.name,
         avatar_url: session.user.image,

@@ -1,3 +1,4 @@
+import "server-only";
 import { MongoClient, Db } from "mongodb";
 
 let uri: string | undefined = process.env.MONGODB_URI as string | undefined;

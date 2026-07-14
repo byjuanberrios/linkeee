@@ -1,14 +1,20 @@
+import "server-only";
 import type { NextAuthOptions } from "next-auth"
 import GitHubProvider from "next-auth/providers/github"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { readFileSync } from "fs"
 import { join } from "path"
+import { getDb } from "@/lib/mongodb"
 
 const githubId = process.env.GITHUB_ID
 const githubSecret = process.env.GITHUB_SECRET
 
-function getPasswordHash(): string | null {
+let cachedHash: string | null = null
+let cacheCheckedMongo = false
+let cacheSeededMongo = false
+
+function getEnvOrFileHash(): string | null {
   const fromEnv = process.env.AUTH_PASSWORD_HASH
   if (fromEnv && fromEnv.includes("$2")) {
     return fromEnv
@@ -21,6 +27,52 @@ function getPasswordHash(): string | null {
     return null
   }
   return null
+}
+
+async function getPasswordHash(): Promise<string | null> {
+  if (cachedHash) return cachedHash
+
+  if (!cacheCheckedMongo) {
+    cacheCheckedMongo = true
+    try {
+      const db = await getDb()
+      const doc = await db.collection("auth_config").findOne(
+        { key: "password_hash" },
+        { projection: { hash: 1 } }
+      )
+      if (doc?.hash && typeof doc.hash === "string" && doc.hash.includes("$2")) {
+        cachedHash = doc.hash
+        return cachedHash
+      }
+    } catch {
+      // fall through to env/file
+    }
+  }
+
+  const fallback = getEnvOrFileHash()
+  if (fallback) cachedHash = fallback
+
+  if (fallback && !cacheSeededMongo) {
+    cacheSeededMongo = true
+    try {
+      const db = await getDb()
+      await db.collection("auth_config").updateOne(
+        { key: "password_hash" },
+        { $setOnInsert: { hash: fallback, key: "password_hash", seeded_from: "file_or_env", created_at: new Date().toISOString() } },
+        { upsert: true }
+      )
+    } catch {
+      // seeding is best-effort
+    }
+  }
+
+  return fallback
+}
+
+export async function invalidatePasswordHashCache(): Promise<void> {
+  cachedHash = null
+  cacheCheckedMongo = false
+  cacheSeededMongo = false
 }
 
 const providers: NextAuthOptions["providers"] = []
@@ -43,7 +95,7 @@ providers.push(
     },
     async authorize(credentials) {
       const allowedEmail = process.env.AUTH_EMAIL
-      const passwordHash = getPasswordHash()
+      const passwordHash = await getPasswordHash()
 
       if (!allowedEmail || !passwordHash) {
         throw new Error("Auth no configurada en el servidor")
@@ -81,4 +133,19 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    async jwt({ token, account }) {
+      if (account?.provider) {
+        token.provider = account.provider
+      }
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        (session.user as { provider?: string }).provider =
+          (token.provider as string | undefined) ?? null
+      }
+      return session
+    },
+  },
 }
