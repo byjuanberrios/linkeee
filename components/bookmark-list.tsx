@@ -1,8 +1,6 @@
 "use client";
 
 import { useState, useEffect, Dispatch, SetStateAction } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -12,8 +10,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,11 +32,9 @@ import {
   X,
   ExternalLink,
   Share2,
-  Calendar,
   Edit,
   Trash2,
   MoreVertical,
-  Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import type { Bookmark } from "@/types/bookmark";
@@ -71,6 +65,16 @@ export default function BookmarkList({
   );
   const [selectedBookmarks, setSelectedBookmarks] = useState<string[]>([]);
   const [deletingMultiple, setDeletingMultiple] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState<string | undefined>(undefined);
+
+  // Recuperar URL pendiente del flujo "pegar sin sesión"
+  useEffect(() => {
+    const stored = sessionStorage.getItem("pending_bookmark_url");
+    if (stored) {
+      setPendingUrl(stored);
+      sessionStorage.removeItem("pending_bookmark_url");
+    }
+  }, []);
 
   const fetchBookmarks = async (tag?: string) => {
     if (!user) return;
@@ -226,8 +230,85 @@ export default function BookmarkList({
     return <div className="text-center py-8">Cargando bookmarks...</div>;
   }
 
+  const countLabel = `${filteredBookmarks.length} ${
+    filteredBookmarks.length === 1 ? "enlace" : "enlaces"
+  }${selectedTag ? ` · tag: ${selectedTag}` : ""}${
+    selectedCategory ? ` · ${selectedCategory}` : ""
+  }${showSharedOnly ? " · compartidos" : ""}`;
+
+  const renderRowActions = (bookmark: Bookmark) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+        >
+          <MoreVertical className="h-3.5 w-3.5" />
+          <span className="sr-only">Abrir menú</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem asChild>
+          <a
+            href={bookmark.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2"
+          >
+            <ExternalLink className="h-4 w-4 mr-1" />
+            Abrir enlace
+          </a>
+        </DropdownMenuItem>
+        <BookmarkForm
+          bookmark={bookmark}
+          onBookmarkUpdated={() => fetchBookmarks(selectedTag || undefined)}
+          trigger={
+            <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
+            </DropdownMenuItem>
+          }
+        />
+        <DropdownMenuSeparator />
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Eliminar
+            </DropdownMenuItem>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar enlace?</AlertDialogTitle>
+              <AlertDialogDescription>
+                ¿Quitar &quot;{bookmark.title}&quot; de tu archivo? No se puede
+                deshacer.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => handleDeleteBookmark(bookmark.id)}
+                disabled={deletingBookmarkId === bookmark.id}
+                className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              >
+                {deletingBookmarkId === bookmark.id
+                  ? "Eliminando…"
+                  : "Eliminar"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <BookmarkControls
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
@@ -237,67 +318,69 @@ export default function BookmarkList({
         selectedBookmarksCount={selectedBookmarks.length}
         onDeleteMultiple={handleDeleteMultiple}
         deletingMultiple={deletingMultiple}
+        initialUrl={pendingUrl}
+        defaultOpen={!!pendingUrl}
       />
 
       {(selectedTag || selectedCategory || showSharedOnly) && (
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-muted-foreground">
-              Filtrando por:
-            </span>
-            {selectedTag && (
-              <Badge variant="default" className="flex items-center gap-2">
-                {selectedTag}
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={clearTagFilter}
-                />
-              </Badge>
-            )}
-            {selectedCategory && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-2 capitalize"
-              >
-                {selectedCategory}
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={clearCategoryFilter}
-                />
-              </Badge>
-            )}
-            {showSharedOnly && (
-              <Badge variant="secondary" className="flex items-center gap-2">
-                <Share2 className="w-3 h-3" />
-                Compartidos
-                <X
-                  className="w-3 h-3 cursor-pointer"
-                  onClick={() => setShowSharedOnly(false)}
-                />
-              </Badge>
-            )}
-          </div>
+        <div className="flex items-center gap-2 flex-wrap font-mono text-xs">
+          <span className="text-muted-foreground">filtro:</span>
+          {selectedTag && (
+            <button
+              onClick={clearTagFilter}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              #{selectedTag}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          {selectedCategory && (
+            <button
+              onClick={clearCategoryFilter}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground capitalize hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              {selectedCategory}
+              <X className="w-3 h-3" />
+            </button>
+          )}
+          {showSharedOnly && (
+            <button
+              onClick={() => setShowSharedOnly(false)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 bg-secondary text-secondary-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+            >
+              <Share2 className="w-3 h-3" />
+              compartidos
+              <X className="w-3 h-3" />
+            </button>
+          )}
         </div>
       )}
 
       {filteredBookmarks.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {searchTerm
-            ? `No se encontraron bookmarks que coincidan con "${searchTerm}"`
-            : selectedTag
-            ? `No hay bookmarks con el tag "${selectedTag}"`
-            : showSharedOnly
-            ? "No tienes bookmarks compartidos aún."
-            : "No tienes bookmarks aún. ¡Agrega tu primero!"}
+        <div className="border border-dashed border-border py-16 px-6 text-center">
+          <p className="font-mono text-sm text-muted-foreground">
+            {searchTerm
+              ? `sin resultados para "${searchTerm}"`
+              : selectedTag
+              ? `nada con el tag #${selectedTag}`
+              : showSharedOnly
+              ? "no tienes enlaces compartidos todavía"
+              : "tu archivo está vacío — pega tu primer enlace arriba"}
+          </p>
         </div>
       ) : (
         <>
+          <div className="flex items-center justify-between font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+            <span>{countLabel}</span>
+            <span className="hidden sm:inline">orden: recientes</span>
+          </div>
+
           {/* Vista de tabla para desktop */}
-          <div className="hidden md:block border rounded-lg">
+          <div className="hidden md:block border border-border overflow-hidden">
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="w-10 h-9 px-3">
                     <input
                       type="checkbox"
                       checked={
@@ -306,164 +389,95 @@ export default function BookmarkList({
                       }
                       onChange={handleSelectAll}
                       aria-label="Seleccionar todos"
+                      className="accent-accent"
                     />
                   </TableHead>
-                  <TableHead className="w-[300px]">Título</TableHead>
-                  <TableHead className="w-[150px]">Tags</TableHead>
-                  <TableHead className="w-[100px]">Categoría</TableHead>
-                  <TableHead className="w-[120px]">Fecha</TableHead>
-                  <TableHead className="w-[80px]">Acciones</TableHead>
+                  <TableHead className="h-9 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Enlace
+                  </TableHead>
+                  <TableHead className="h-9 w-[160px] font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Tags
+                  </TableHead>
+                  <TableHead className="h-9 w-[120px] font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Categoría
+                  </TableHead>
+                  <TableHead className="h-9 w-[90px] font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Fecha
+                  </TableHead>
+                  <TableHead className="h-9 w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredBookmarks.map((bookmark) => (
-                  <TableRow key={bookmark.id} className="hover:bg-muted/50">
-                    <TableCell>
+                  <TableRow
+                    key={bookmark.id}
+                    className="border-border group hover:bg-secondary/40"
+                  >
+                    <TableCell className="px-3 py-2">
                       <input
                         type="checkbox"
                         checked={selectedBookmarks.includes(bookmark.id)}
                         onChange={() => handleSelectBookmark(bookmark.id)}
-                        aria-label={`Seleccionar bookmark ${bookmark.title}`}
+                        aria-label={`Seleccionar ${bookmark.title}`}
+                        className="accent-accent"
                       />
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                    <TableCell className="py-2 pr-4 min-w-0">
+                      <div className="flex items-center gap-2 min-w-0">
                         <a
                           href={bookmark.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium hover:text-stone-600 flex items-center gap-1"
+                          className="font-medium text-foreground hover:text-accent transition-colors truncate"
+                          title={bookmark.title}
                         >
-                          <span className="whitespace-nowrap overflow-hidden max-w-sm">
-                            {bookmark.title}
-                          </span>
-                          <ExternalLink className="w-3 h-3" />
+                          {bookmark.title}
                         </a>
                         {bookmark.is_shared && (
-                          <Share2 className="w-3 h-3 text-green-600" />
+                          <Share2 className="w-3 h-3 text-accent flex-shrink-0" />
                         )}
+                        <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[280px]">
-                        {bookmark.url}
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1 truncate max-w-[300px]">
-                        {bookmark.description}
+                      <div className="font-mono text-[11px] text-muted-foreground mt-0.5 truncate max-w-[420px]">
+                        {bookmark.url.replace(/^https?:\/\//, "")}
                       </div>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="py-2 pr-4">
                       <div className="flex flex-wrap gap-1">
                         {bookmark.tags.slice(0, 3).map((tag) => (
-                          <Badge
+                          <button
                             key={tag}
-                            variant="outline"
-                            className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground"
                             onClick={() => handleTagClick(tag)}
+                            className="font-mono text-[11px] px-1.5 py-0.5 border border-border text-muted-foreground hover:border-accent hover:text-accent transition-colors"
                           >
                             {tag}
-                          </Badge>
+                          </button>
                         ))}
                         {bookmark.tags.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 text-muted-foreground">
                             +{bookmark.tags.length - 3}
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="secondary"
-                        className="capitalize cursor-pointer hover:bg-primary hover:text-primary-foreground"
+                    <TableCell className="py-2 pr-4">
+                      <button
                         onClick={() => handleCategoryClick(bookmark.category)}
+                        className="font-mono text-[11px] px-1.5 py-0.5 bg-secondary text-secondary-foreground capitalize hover:bg-accent hover:text-accent-foreground transition-colors"
                       >
                         {bookmark.category}
-                      </Badge>
+                      </button>
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="w-3 h-3" />
+                    <TableCell className="py-2 pr-4">
+                      <span className="font-mono text-[11px] text-muted-foreground">
                         {new Date(bookmark.created_at).toLocaleDateString(
-                          "es-ES"
+                          "es-ES",
+                          { year: "2-digit", month: "2-digit", day: "2-digit" }
                         )}
-                      </div>
+                      </span>
                     </TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0"
-                          >
-                            <MoreVertical className="h-4 w-4" />
-                            <span className="sr-only">Abrir menú</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem asChild>
-                            <a
-                              href={bookmark.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center gap-2"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              Abrir enlace
-                            </a>
-                          </DropdownMenuItem>
-                          <BookmarkForm
-                            bookmark={bookmark}
-                            onBookmarkUpdated={() =>
-                              fetchBookmarks(selectedTag || undefined)
-                            }
-                            trigger={
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                              >
-                                <Edit className="h-4 w-4 mr-1" />
-                                Editar
-                              </DropdownMenuItem>
-                            }
-                          />
-                          <DropdownMenuSeparator />
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <DropdownMenuItem
-                                onSelect={(e) => e.preventDefault()}
-                                className="text-red-600 focus:text-red-600"
-                              >
-                                <Trash2 className="h-4 w-4 mr-1" />
-                                Eliminar
-                              </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>
-                                  ¿Eliminar bookmark?
-                                </AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  ¿Estás seguro de que quieres eliminar &quot;
-                                  {bookmark.title}&quot;? Esta acción no se
-                                  puede deshacer.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() =>
-                                    handleDeleteBookmark(bookmark.id)
-                                  }
-                                  disabled={deletingBookmarkId === bookmark.id}
-                                  className="bg-red-600 hover:bg-red-700"
-                                >
-                                  {deletingBookmarkId === bookmark.id
-                                    ? "Eliminando..."
-                                    : "Eliminar"}
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <TableCell className="py-2 pr-2">
+                      {renderRowActions(bookmark)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -472,144 +486,72 @@ export default function BookmarkList({
           </div>
 
           {/* Vista de tarjetas para móvil */}
-          <div className="md:hidden space-y-4">
+          <div className="md:hidden divide-y divide-border border border-border">
             {filteredBookmarks.map((bookmark) => (
-              <div
-                key={bookmark.id}
-                className="border rounded-lg p-4 space-y-3 hover:bg-muted/50"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <input
-                      type="checkbox"
-                      checked={selectedBookmarks.includes(bookmark.id)}
-                      onChange={() => handleSelectBookmark(bookmark.id)}
-                      aria-label={`Seleccionar bookmark ${bookmark.title}`}
-                      className="mt-1"
-                    />
-                    <div className="flex-1 min-w-0">
+              <div key={bookmark.id} className="p-3 group">
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={selectedBookmarks.includes(bookmark.id)}
+                    onChange={() => handleSelectBookmark(bookmark.id)}
+                    aria-label={`Seleccionar ${bookmark.title}`}
+                    className="mt-1 accent-accent"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
                       <a
                         href={bookmark.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-medium hover:text-stone-600 flex items-center gap-1 text-sm"
+                        className="font-medium text-sm text-foreground hover:text-accent transition-colors flex items-center gap-1 min-w-0"
                       >
                         <span className="truncate">{bookmark.title}</span>
                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
                       </a>
-                      {bookmark.is_shared && (
-                        <Share2 className="w-3 h-3 text-green-600 mt-1" />
-                      )}
+                      {renderRowActions(bookmark)}
+                    </div>
+                    <div className="font-mono text-[11px] text-muted-foreground mt-1 truncate">
+                      {bookmark.url.replace(/^https?:\/\//, "")}
+                    </div>
+                    {bookmark.description && (
+                      <p className="text-xs text-muted-foreground mt-1.5 line-clamp-2">
+                        {bookmark.description}
+                      </p>
+                    )}
+                    <div className="flex items-center justify-between gap-2 mt-2 flex-wrap">
+                      <div className="flex flex-wrap gap-1">
+                        {bookmark.tags.slice(0, 3).map((tag) => (
+                          <button
+                            key={tag}
+                            onClick={() => handleTagClick(tag)}
+                            className="font-mono text-[11px] px-1.5 py-0.5 border border-border text-muted-foreground hover:border-accent hover:text-accent transition-colors"
+                          >
+                            {tag}
+                          </button>
+                        ))}
+                        {bookmark.tags.length > 3 && (
+                          <span className="font-mono text-[11px] px-1.5 py-0.5 text-muted-foreground">
+                            +{bookmark.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {bookmark.is_shared && (
+                          <Share2 className="w-3 h-3 text-accent" />
+                        )}
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {new Date(bookmark.created_at).toLocaleDateString(
+                            "es-ES",
+                            {
+                              year: "2-digit",
+                              month: "2-digit",
+                              day: "2-digit",
+                            }
+                          )}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-8 w-8 p-0 flex-shrink-0"
-                      >
-                        <MoreVertical className="h-4 w-4" />
-                        <span className="sr-only">Abrir menú</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem asChild>
-                        <a
-                          href={bookmark.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2"
-                        >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          Abrir enlace
-                        </a>
-                      </DropdownMenuItem>
-                      <BookmarkForm
-                        bookmark={bookmark}
-                        onBookmarkUpdated={() =>
-                          fetchBookmarks(selectedTag || undefined)
-                        }
-                        trigger={
-                          <DropdownMenuItem
-                            onSelect={(e) => e.preventDefault()}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
-                          </DropdownMenuItem>
-                        }
-                      />
-                      <DropdownMenuSeparator />
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <DropdownMenuItem
-                            onSelect={(e) => e.preventDefault()}
-                            className="text-red-600 focus:text-red-600"
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Eliminar
-                          </DropdownMenuItem>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              ¿Eliminar bookmark?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              ¿Estás seguro de que quieres eliminar &quot;
-                              {bookmark.title}&quot;? Esta acción no se puede
-                              deshacer.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => handleDeleteBookmark(bookmark.id)}
-                              disabled={deletingBookmarkId === bookmark.id}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              {deletingBookmarkId === bookmark.id
-                                ? "Eliminando..."
-                                : "Eliminar"}
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="text-xs text-muted-foreground truncate">
-                  {bookmark.url}
-                </div>
-
-                {bookmark.description && (
-                  <div className="text-xs text-muted-foreground line-clamp-2">
-                    {bookmark.description}
-                  </div>
-                )}
-
-                <div className="flex flex-wrap gap-1">
-                  {bookmark.tags.slice(0, 3).map((tag) => (
-                    <Badge
-                      key={tag}
-                      variant="outline"
-                      className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground"
-                      onClick={() => handleTagClick(tag)}
-                    >
-                      {tag}
-                    </Badge>
-                  ))}
-                  {bookmark.tags.length > 3 && (
-                    <Badge variant="outline" className="text-xs">
-                      +{bookmark.tags.length - 3}
-                    </Badge>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Calendar className="w-3 h-3" />
-                  {new Date(bookmark.created_at).toLocaleDateString("es-ES")}
                 </div>
               </div>
             ))}

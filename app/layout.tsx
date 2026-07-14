@@ -1,14 +1,24 @@
 import type React from "react";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "./providers";
 
-const inter = Inter({ subsets: ["latin"] });
+const hanken = Hanken_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-body",
+  display: "swap",
+});
+
+const mono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Linkeee",
-  description: "Gestiona tus bookmarks favoritos",
+  description: "Tu colección de enlaces. Pega, guarda, encuéntralos después.",
 };
 
 export default function RootLayout({
@@ -17,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
-      <body className={inter.className}>
+    <html lang="es" suppressHydrationWarning>
+      <body className={`${hanken.variable} ${mono.variable} font-body antialiased`}>
         <Providers>{children}</Providers>
       </body>
     </html>

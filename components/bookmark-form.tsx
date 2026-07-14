@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { CategorySelector } from "@/components/ui/category-selector";
 import {
   Dialog,
@@ -26,13 +25,18 @@ interface BookmarkFormProps {
   onBookmarkUpdated?: () => void;
   bookmark?: Bookmark; // Para modo edición
   trigger?: React.ReactNode; // Trigger personalizado
+  initialUrl?: string; // URL pre-cargada (flujo: pegar sin sesión)
+  defaultOpen?: boolean; // Abrir dialog automáticamente
 }
 
 // Trigger por defecto para modo creación
 export const DefaultAddBookmarkButton = (
-  <Button size="sm">
-    <Plus className="w-4 h-4" />
-    <span>Agregar Bookmark</span>
+  <Button
+    size="sm"
+    className="h-10 px-4 bg-accent text-accent-foreground hover:bg-accent/90 font-mono text-xs font-medium"
+  >
+    <Plus className="w-3.5 h-3.5" />
+    <span>agregar enlace</span>
   </Button>
 );
 
@@ -41,12 +45,14 @@ export default function BookmarkForm({
   onBookmarkUpdated,
   bookmark,
   trigger,
+  initialUrl,
+  defaultOpen,
 }: BookmarkFormProps) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    url: "",
+    url: initialUrl ?? "",
     title: "",
     description: "",
     tags: [] as string[],
@@ -71,6 +77,11 @@ export default function BookmarkForm({
       });
     }
   }, [bookmark]);
+
+  // Abrir automáticamente si se pide (flujo: URL pendiente tras login)
+  useEffect(() => {
+    if (defaultOpen) setOpen(true);
+  }, [defaultOpen]);
 
   // Función para obtener metadatos de la URL
   const fetchUrlMetadata = async () => {
@@ -228,47 +239,53 @@ export default function BookmarkForm({
       <DialogTrigger asChild>
         {trigger || DefaultAddBookmarkButton}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[460px]">
         <DialogHeader>
-          <DialogTitle>
-            {isEditMode ? "Editar Bookmark" : "Agregar Nuevo Bookmark"}
+          <DialogTitle className="font-mono text-base">
+            {isEditMode ? "editar enlace" : "agregar enlace"}
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="url">URL</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="url" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              URL
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="url"
                 type="url"
-                placeholder="https://domain.com"
+                placeholder="https://dominio.com"
                 value={formData.url}
                 onChange={(e) =>
                   setFormData({ ...formData, url: e.target.value })
                 }
                 required
+                className="font-mono text-sm"
               />
               <Button
                 type="button"
                 variant="outline"
                 onClick={fetchUrlMetadata}
                 disabled={fetchingMetadata || !formData.url.trim()}
-                title="Obtener título y descripción automáticamente"
+                title="Rellenar título y descripción automáticamente"
+                className="h-9 w-9 p-0"
               >
                 {fetchingMetadata ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 ) : (
-                  <Wand2 className="w-4 h-4" />
+                  <Wand2 className="w-3.5 h-3.5" />
                 )}
               </Button>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="title">Título</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="title" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              Título
+            </Label>
             <Input
               id="title"
-              placeholder="Título del bookmark"
+              placeholder="título del enlace"
               value={formData.title}
               onChange={(e) =>
                 setFormData({ ...formData, title: e.target.value })
@@ -277,11 +294,13 @@ export default function BookmarkForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Descripción</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              Descripción
+            </Label>
             <Textarea
               id="description"
-              placeholder="Descripción opcional"
+              placeholder="descripción opcional"
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
@@ -289,8 +308,10 @@ export default function BookmarkForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category">Categoría</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="category" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              Categoría
+            </Label>
             <CategorySelector
               value={formData.category}
               onChange={(value) =>
@@ -299,56 +320,64 @@ export default function BookmarkForm({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tags</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="tags" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+              Tags
+            </Label>
             <div className="flex gap-2">
               <Input
                 id="tags"
-                placeholder="Agregar tag"
+                placeholder="agregar tag · enter"
                 value={tagInput}
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyPress={handleKeyPress}
+                className="font-mono text-sm"
               />
-              <Button type="button" onClick={addTag} variant="outline">
-                <Plus className="w-4 h-4" />
+              <Button type="button" onClick={addTag} variant="outline" className="px-3">
+                <Plus className="w-3.5 h-3.5" />
               </Button>
             </div>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {formData.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant="secondary"
-                  className="flex items-center gap-1"
-                >
-                  {tag}
-                  <X
-                    className="w-3 h-3 cursor-pointer"
+            {formData.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {formData.tags.map((tag) => (
+                  <button
+                    type="button"
+                    key={tag}
                     onClick={() => removeTag(tag)}
-                  />
-                </Badge>
-              ))}
-            </div>
+                    className="inline-flex items-center gap-1 font-mono text-[11px] px-1.5 py-0.5 border border-border bg-secondary hover:border-accent hover:text-accent transition-colors"
+                  >
+                    {tag}
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 pt-1">
             <Checkbox
               id="is_shared"
               checked={formData.is_shared}
               onCheckedChange={(checked) =>
                 setFormData({ ...formData, is_shared: checked as boolean })
               }
+              className="accent-accent"
             />
-            <Label htmlFor="is_shared">Compartir públicamente</Label>
+            <Label htmlFor="is_shared" className="text-sm">
+              Compartir públicamente
+            </Label>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full h-10 bg-accent text-accent-foreground hover:bg-accent/90 font-mono text-xs font-medium"
+            disabled={loading}
+          >
             {loading
-              ? isEditMode
-                ? "Guardando..."
-                : "Guardando..."
+              ? "guardando…"
               : isEditMode
-              ? "Actualizar Bookmark"
-              : "Guardar Bookmark"}
+              ? "actualizar enlace"
+              : "guardar enlace"}
           </Button>
         </form>
       </DialogContent>

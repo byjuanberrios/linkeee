@@ -6,8 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Bookmark, LogIn, Github } from "lucide-react";
+import { LogIn, Github } from "lucide-react";
+import ThemeToggle from "@/components/theme-toggle";
 
 const HAS_GITHUB = !!(process.env.NEXT_PUBLIC_GITHUB_ID && process.env.NEXT_PUBLIC_GITHUB_ID.trim() !== "");
 const ALLOWED_EMAIL = process.env.NEXT_PUBLIC_ALLOWED_EMAIL;
@@ -31,24 +31,34 @@ export default function LoginPage() {
       router.push("/");
       router.refresh();
     } else {
-      setError("Credenciales inválidas");
+      setError("Email o contraseña incorrectos");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-2">
-            <Bookmark className="w-8 h-8" />
+    <div className="min-h-screen bg-background flex flex-col">
+      <header className="border-b border-border">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 h-12 flex items-center justify-between">
+          <div className="flex items-center gap-2 font-mono text-sm">
+            <span className="font-semibold tracking-tight">linkeee</span>
+            <span className="text-muted-foreground">/</span>
+            <span className="text-muted-foreground">iniciar sesión</span>
           </div>
-          <CardTitle className="text-2xl">Linkeee</CardTitle>
-          <CardDescription>Inicia sesión para acceder a tus bookmarks</CardDescription>
-        </CardHeader>
-        <CardContent>
+          <ThemeToggle />
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 py-16">
+        <div className="w-full max-w-sm">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-accent mb-6">
+            acceso a tu archivo
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                Email
+              </Label>
               <Input
                 id="email"
                 type="email"
@@ -58,10 +68,13 @@ export default function LoginPage() {
                 required
                 autoComplete="email"
                 autoFocus
+                className="font-mono text-sm"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+                Contraseña
+              </Label>
               <Input
                 id="password"
                 type="password"
@@ -70,35 +83,52 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 required
                 autoComplete="current-password"
+                className="font-mono text-sm"
               />
             </div>
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            <Button type="submit" className="w-full" disabled={submitting}>
-              <LogIn className="w-4 h-4 mr-2" />
-              {submitting ? "Ingresando..." : "Iniciar sesión"}
+            {error && (
+              <p className="font-mono text-[11px] text-destructive border-l-2 border-destructive pl-2">
+                {error}
+              </p>
+            )}
+            <Button
+              type="submit"
+              className="w-full h-10 bg-accent text-accent-foreground hover:bg-accent/90 font-mono text-xs font-medium"
+              disabled={submitting}
+            >
+              <LogIn className="w-3.5 h-3.5 mr-1.5" />
+              {submitting ? "ingresando…" : "iniciar sesión"}
             </Button>
           </form>
+
           {HAS_GITHUB && (
             <>
-              <div className="relative my-4">
+              <div className="relative my-5">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
+                  <span className="w-full border-t border-border" />
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">o</span>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
+                    o
+                  </span>
                 </div>
               </div>
-              <Button variant="outline" className="w-full" onClick={signInWithGitHub}>
-                <Github className="w-4 h-4 mr-2" />
-                Continuar con GitHub
+              <Button
+                variant="outline"
+                className="w-full h-10 font-mono text-xs"
+                onClick={signInWithGitHub}
+              >
+                <Github className="w-3.5 h-3.5 mr-1.5" />
+                continuar con github
               </Button>
             </>
           )}
-        </CardContent>
-        <CardFooter className="text-xs text-muted-foreground text-center justify-center">
-          Acceso restringido a usuarios autorizados
-        </CardFooter>
-      </Card>
+
+          <p className="mt-6 font-mono text-[10px] text-muted-foreground text-center">
+            acceso restringido a usuarios autorizados
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

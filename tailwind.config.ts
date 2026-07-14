@@ -10,6 +10,11 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			body: ['var(--font-body)', 'system-ui', 'sans-serif'],
+  			mono: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+  			display: ['var(--font-mono)', 'ui-monospace', 'monospace'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -44,6 +49,10 @@ const config: Config = {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
+  			mark: {
+  				DEFAULT: 'hsl(var(--mark))',
+  				foreground: 'hsl(var(--mark-foreground))'
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',
@@ -64,8 +73,8 @@ const config: Config = {
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
-  			md: 'calc(var(--radius) - 2px)',
-  			sm: 'calc(var(--radius) - 4px)'
+  			md: 'calc(var(--radius) - 1px)',
+  			sm: 'calc(var(--radius) - 2px)'
   		},
   		keyframes: {
   			'accordion-down': {
@@ -83,11 +92,16 @@ const config: Config = {
   				to: {
   					height: '0'
   				}
+  			},
+  			'caret-blink': {
+  				'0%, 100%': { opacity: '1' },
+  				'50%': { opacity: '0' }
   			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'caret-blink': 'caret-blink 1.1s steps(1) infinite'
   		}
   	}
   },
