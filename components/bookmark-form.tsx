@@ -117,12 +117,20 @@ export default function BookmarkForm({
           ...prev,
           title: data.title || prev.title,
           description: data.description || prev.description,
+          category: data.category || prev.category,
+          tags: data.tags && data.tags.length > 0 ? data.tags : prev.tags,
         }));
+
+        const extras: string[] = [];
+        if (data.category) extras.push(`categoría: ${data.category}`);
+        if (data.tags && data.tags.length > 0) extras.push(`${data.tags.length} tags`);
 
         toast({
           title: "Metadatos obtenidos",
           description:
-            "El título y descripción se han rellenado automáticamente.",
+            extras.length > 0
+              ? `Título, descripción y ${extras.join(" · ")}.`
+              : "El título y descripción se han rellenado automáticamente.",
         });
       } else {
         throw new Error(

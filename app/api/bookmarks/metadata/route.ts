@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { classifyUrl } from "@/lib/classify/classify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,7 +12,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Obtener el Bearer Token desde las variables de entorno
     const apiKey = process.env.URLMETA_API_KEY;
 
     if (!apiKey) {
@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Hacer la petición a urlmeta.org con autenticación Basic Auth
+    // 1. Fetch metadata via URLMeta
     const response = await fetch(
       `https://api.urlmeta.org/meta?url=${encodeURIComponent(url)}`,
       {
@@ -44,7 +44,6 @@ export async function POST(request: NextRequest) {
     if (data.result && data.result.status === "OK") {
       const metadata = data.meta;
 
-      // Verificar si el título está vacío
       if (!metadata.title || metadata.title.trim() === "") {
         return NextResponse.json(
           {
@@ -55,10 +54,29 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // 2. Intentar fetch del HTML para clasificación (best-effort, no bloquea)
+      let html: string | undefined;
+      try {
+        const htmlRes = await fetch(url, {
+          headers: { "User-Agent": "Linkeee/1.0 (+bookmark manager)" },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (htmlRes.ok) {
+          html = await htmlRes.text();
+        }
+      } catch {
+        // Si no podemos traer el HTML, seguimos con path heuristics
+      }
+
+      // 3. Clasificar
+      const classification = classifyUrl(url, html);
+
       return NextResponse.json({
         success: true,
         title: metadata.title,
         description: metadata.description,
+        category: classification.category,
+        tags: classification.tags,
       });
     } else {
       return NextResponse.json(
