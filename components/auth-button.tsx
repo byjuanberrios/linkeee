@@ -12,7 +12,7 @@ import { Github, LogOut, AlertCircle, LogIn } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useRouter } from "next/navigation";
 
-const HAS_GITHUB = !!process.env.NEXT_PUBLIC_GITHUB_ID;
+const HAS_GITHUB = !!(process.env.NEXT_PUBLIC_GITHUB_ID && process.env.NEXT_PUBLIC_GITHUB_ID.trim() !== "");
 
 export default function AuthButton() {
   const { user, loading, signInWithGitHub, signOut, isAuthorized } = useAuth();

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bookmark, LogIn, Github } from "lucide-react";
 
-const HAS_GITHUB = !!process.env.NEXT_PUBLIC_GITHUB_ID;
+const HAS_GITHUB = !!(process.env.NEXT_PUBLIC_GITHUB_ID && process.env.NEXT_PUBLIC_GITHUB_ID.trim() !== "");
 const ALLOWED_EMAIL = process.env.NEXT_PUBLIC_ALLOWED_EMAIL;
 
 export default function LoginPage() {
