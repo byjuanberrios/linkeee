@@ -3,6 +3,8 @@ import { getDb } from "@/lib/mongodb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { ObjectId } from "mongodb";
+import { embed } from "@/lib/embeddings/model";
+import { buildBookmarkText } from "@/lib/embeddings/similarity";
 
 // Obtener el email autorizado desde las variables de entorno
 const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL;
@@ -70,6 +72,19 @@ export async function PUT(
     };
 
     await collection.updateOne({ _id }, { $set: updateDoc });
+
+    // Re-embed: el texto o categoría cambiaron, regeneramos el vector
+    try {
+      const text = buildBookmarkText(title, description, url);
+      const vector = await embed(text);
+      await collection.updateOne(
+        { _id },
+        { $set: { embedding: vector } }
+      );
+    } catch (embedError) {
+      console.error("Re-embed error:", embedError);
+    }
+
     const updated = await collection.findOne({ _id });
     const bookmark = {
       id: updated!._id.toString(),

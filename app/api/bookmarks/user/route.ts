@@ -3,6 +3,13 @@ import { getDb } from "@/lib/mongodb";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import type { ObjectId } from "mongodb";
+import { embed } from "@/lib/embeddings/model";
+import {
+  cosineSimilarity,
+  classifyByNeighbors,
+  buildBookmarkText,
+  type Neighbor,
+} from "@/lib/embeddings/similarity";
 
 // Obtener el email autorizado desde las variables de entorno
 const ALLOWED_EMAIL = process.env.ALLOWED_EMAIL;
@@ -137,7 +144,99 @@ export async function POST(request: Request) {
     };
 
     const result = await collection.insertOne(doc);
-    const bookmark = { ...doc, id: result.insertedId.toString() };
+    const bookmarkId = result.insertedId.toString();
+    const bookmark = { ...doc, id: bookmarkId };
+
+    // Auto-classify por embeddings si el bookmark no tiene categoría real
+    const needsClassification =
+      !category || category === "Sin categorizar" || category === "uncategorized";
+
+    if (needsClassification) {
+      try {
+        const text = buildBookmarkText(title, description, url);
+        const vector = await embed(text);
+
+        const neighbors = await collection
+          .find({
+            user_id: session.user.email,
+            _id: { $ne: result.insertedId },
+            embedding: { $exists: true },
+            category: { $nin: ["Sin categorizar", "uncategorized", ""] },
+          })
+          .limit(100)
+          .toArray();
+
+        if (neighbors.length >= 3) {
+          const scored: Neighbor[] = neighbors.map((n) => ({
+            category: n.category,
+            similarity: cosineSimilarity(vector, n.embedding!),
+            tags: n.tags ?? [],
+          }));
+
+          scored.sort((a, b) => b.similarity - a.similarity);
+
+          const result_classify = classifyByNeighbors(scored, 5);
+
+          if (result_classify.category && result_classify.confidence > 0.5) {
+            const updateFields: Record<string, unknown> = {
+              embedding: vector,
+              updated_at: new Date().toISOString(),
+            };
+
+            if (result_classify.category) {
+              updateFields.category = result_classify.category;
+            }
+
+            if (result_classify.tags.length > 0) {
+              const existingTags = Array.isArray(tags) ? tags : [];
+              const merged = [
+                ...existingTags,
+                ...result_classify.tags.filter(
+                  (t) => !existingTags.includes(t)
+                ),
+              ];
+              updateFields.tags = merged.slice(0, 8);
+            }
+
+            await collection.updateOne(
+              { _id: result.insertedId },
+              { $set: updateFields }
+            );
+
+            (bookmark as Record<string, unknown>).category =
+              result_classify.category;
+            if (result_classify.tags.length > 0) {
+              (bookmark as Record<string, unknown>).tags =
+                updateFields.tags;
+            }
+          } else {
+            await collection.updateOne(
+              { _id: result.insertedId },
+              { $set: { embedding: vector } }
+            );
+          }
+        } else {
+          await collection.updateOne(
+            { _id: result.insertedId },
+            { $set: { embedding: vector } }
+          );
+        }
+      } catch (classifyError) {
+        console.error("Auto-classify error:", classifyError);
+      }
+    } else {
+      // Tiene categoría definida por el usuario — solo guardamos el embedding
+      try {
+        const text = buildBookmarkText(title, description, url);
+        const vector = await embed(text);
+        await collection.updateOne(
+          { _id: result.insertedId },
+          { $set: { embedding: vector } }
+        );
+      } catch (embedError) {
+        console.error("Embed error:", embedError);
+      }
+    }
 
     return NextResponse.json({ bookmark });
   } catch (error) {

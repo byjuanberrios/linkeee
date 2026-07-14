@@ -11,4 +11,5 @@ export interface Bookmark {
   is_shared: boolean;
   created_at: string;
   updated_at: string;
+  embedding?: number[];
 }
