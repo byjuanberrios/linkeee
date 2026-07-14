@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // standalone solo cuando Docker lo pide (production build en contenedor)
+  output: process.env.NEXT_OUTPUT_STANDALONE === "true" ? "standalone" : undefined,
   eslint: {
     ignoreDuringBuilds: true,
   },
